@@ -5,11 +5,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>es.upm.oeg.epnoi</groupId>
-    <artifactId>spark-analyzer</artifactId>
+    <artifactId>spark-scala-analyzer</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <properties>
+        <app.name>analyzer</app.name>
+        <assemble.directory>target/generated-resources/appassembler/jsw/${app.name}</assemble.directory>
         <java.version>1.8</java.version>
+        <maven.dependency.version>2.5.1</maven.dependency.version>
+        <maven.jar.version>2.5</maven.jar.version>
+        <maven.appassembler.version>1.9</maven.appassembler.version>
+        <maven.assembly.version>2.5.3</maven.assembly.version>
+        <maven.deploy.version>2.8.1</maven.deploy.version>
         <spring.version>4.1.4.RELEASE</spring.version>
         <springboot.version>1.2.1.RELEASE</springboot.version>
         <encoding>UTF-8</encoding>
@@ -68,6 +75,160 @@
                                 <arg>${project.build.directory}/.scala_dependencies</arg>
                             </args>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${springboot.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.dependency.version}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>appassembler-maven-plugin</artifactId>
+                <version>${maven.appassembler.version}</version>
+                <executions>
+                    <execution>
+                        <id>generate-jsw-scripts</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>generate-daemons</goal>
+                        </goals>
+                        <configuration>
+                            <configurationDirectory>config</configurationDirectory>
+                            <copyConfigurationDirectory>true</copyConfigurationDirectory>
+                            <!--<assembleDirectory>${assemble.directory}</assembleDirectory>-->
+                            <repositoryName>lib</repositoryName>
+                            <repositoryLayout>flat</repositoryLayout>
+                            <!--<preWrapperConf>src/main/resources/pre-wrapper.conf</preWrapperConf>-->
+                            <daemons>
+                                <daemon>
+                                    <id>${app.name}</id>
+                                    <wrapperMainClass>org.tanukisoftware.wrapper.WrapperSimpleApp</wrapperMainClass>
+                                    <mainClass>es.upm.oeg.spark.scala.analyzer.AppConfig</mainClass>
+                                    <platforms>
+                                        <platform>jsw</platform>
+                                    </platforms>
+                                    <jvmSettings>
+                                        <initialMemorySize>4096M</initialMemorySize>
+                                        <maxMemorySize>4096M</maxMemorySize>
+                                        <maxStackSize>1024K</maxStackSize>
+                                        <systemProperties>
+                                            <systemProperty>app.name=${app.name}</systemProperty>
+                                            <systemProperty>user.timezone=Etc/GMT</systemProperty>
+                                            <systemProperty>sun.jnu.encoding=UTF-8</systemProperty>
+                                            <systemProperty>file.encoding=UTF-8</systemProperty>
+                                            <systemProperty>user.country=US</systemProperty>
+                                            <systemProperty>user.language=en</systemProperty>
+                                            <systemProperty>javax.xml.accessExternalDTD=all</systemProperty>
+                                        </systemProperties>
+                                        <extraArguments>
+                                            <extraArgument>-XX:+UseConcMarkSweepGC</extraArgument>
+                                            <extraArgument>-XX:+CMSClassUnloadingEnabled</extraArgument>
+                                            <extraArgument>-XX:MaxPermSize=128M</extraArgument>
+                                            <extraArgument>-server</extraArgument>
+                                        </extraArguments>
+                                    </jvmSettings>
+                                    <generatorConfigurations>
+                                        <generatorConfiguration>
+                                            <generator>jsw</generator>
+                                            <includes>
+                                                <include>linux-x86-32</include>
+                                                <include>linux-x86-64</include>
+                                                <include>macosx-universal-64</include>
+                                                <include>macosx-universal-32</include>
+                                            </includes>
+                                            <configuration>
+                                                <property>
+                                                    <name>configuration.directory.in.classpath.first</name>
+                                                    <value>config</value>
+                                                </property>
+                                                <property>
+                                                    <name>wrapper.logfile</name>
+                                                    <value>logs/wrapper.log.YYYYMMDD</value>
+                                                </property>
+                                                <property>
+                                                    <name>wrapper.logfile.rollmode</name>
+                                                    <value>DATE</value>
+                                                </property>
+                                                <property>
+                                                    <name>wrapper.java.command</name>
+                                                    <value>%JAVA_HOME%/bin/java</value>
+                                                </property>
+                                                <property>
+                                                    <name>wrapper.logfile.maxsize</name>
+                                                    <value>100m</value>
+                                                </property>
+                                                <property>
+                                                    <name>wrapper.logfile.maxfiles</name>
+                                                    <value>30</value>
+                                                </property>
+                                            </configuration>
+                                        </generatorConfiguration>
+                                    </generatorConfigurations>
+                                </daemon>
+                            </daemons>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>${maven.assembly.version}</version>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attached</goal>
+                        </goals>
+                        <configuration>
+                            <tarLongFileMode>gnu</tarLongFileMode>
+                            <descriptors>
+                                <descriptor>src/main/assembly/assembly.xml</descriptor>
+                            </descriptors>
+                            <appendAssemblyId>false</appendAssemblyId>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>${maven.deploy.version}</version>
+                <configuration>
+                    <altDeploymentRepository>internal.repo::default::file://${project.build.directory}/mvn-repo</altDeploymentRepository>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.github</groupId>
+                <artifactId>site-maven-plugin</artifactId>
+                <version>0.10</version>
+                <configuration>
+                    <message>${project.name} v${project.version}</message>
+                    <noJekyll>true</noJekyll>
+                    <outputDirectory>${project.build.directory}/mvn-repo</outputDirectory>
+                    <branch>refs/heads/mvn-repo</branch>
+                    <includes><include>**/*</include></includes>
+                    <merge>true</merge>
+                    <repositoryName>oaipmh-analyzer</repositoryName>
+                    <repositoryOwner>cabadol</repositoryOwner>
+                    <server>github</server>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>site</goal>
+                        </goals>
+                        <phase>deploy</phase>
                     </execution>
                 </executions>
             </plugin>
